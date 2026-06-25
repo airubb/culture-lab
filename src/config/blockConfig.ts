@@ -1,0 +1,58 @@
+import type { BlockConfig, BlockType } from "@/game/types";
+
+export const BLOCK_CONFIG_BY_TYPE: Record<BlockType, BlockConfig> = {
+  normal: {
+    type: "normal",
+    label: "通常",
+    hp: 1,
+    score: 10,
+    medalReward: 0,
+    fill: "#60a5fa",
+    border: "#1d4ed8",
+  },
+  iron: {
+    type: "iron",
+    label: "鉄",
+    hp: 2,
+    score: 25,
+    medalReward: 1,
+    fill: "#94a3b8",
+    border: "#475569",
+  },
+  explode: {
+    type: "explode",
+    label: "爆発",
+    hp: 1,
+    score: 20,
+    medalReward: 1,
+    fill: "#fb923c",
+    border: "#c2410c",
+  },
+  recover: {
+    type: "recover",
+    label: "回復",
+    hp: 1,
+    score: 15,
+    medalReward: 2,
+    fill: "#4ade80",
+    border: "#15803d",
+  },
+  medal: {
+    type: "medal",
+    label: "メダル",
+    hp: 1,
+    score: 15,
+    medalReward: 4,
+    fill: "#facc15",
+    border: "#a16207",
+  },
+  fever: {
+    type: "fever",
+    label: "フィーバー",
+    hp: 1,
+    score: 30,
+    medalReward: 3,
+    fill: "#e879f9",
+    border: "#a21caf",
+  },
+};
