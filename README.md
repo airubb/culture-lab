@@ -1,5 +1,7 @@
 # スロット崩し (Slot Breaker)
 
+[公開リンク](https://airubb.github.io/culture-lab/)
+
 ## 概要
 
 スロットとブロック崩しを組み合わせた認知症予防ゲームです。
