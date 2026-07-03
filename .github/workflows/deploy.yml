@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - make-landing-page
 
 permissions:
   contents: read
