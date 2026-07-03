@@ -37,17 +37,10 @@ function copyLandingFiles(): Plugin {
       const mazeMissionOutputDir = path.resolve(distDir, "games/Maze-Mission");
       rmSync(mazeMissionOutputDir, { recursive: true, force: true });
       cpSync(mazeMissionDir, mazeMissionOutputDir, { recursive: true });
-
-      // gamesフォルダを丸ごとコピー
-      const gamesDir = path.resolve(__dirname, "games");
-      const gamesOutputDir = path.resolve(distDir, "games");    
-      rmSync(gamesOutputDir, { recursive: true, force: true });
-      cpSync(gamesDir, gamesOutputDir, { recursive: true });
     },
   };
 }
 
-// https://vite.dev/config/
 export default defineConfig({
   base: "/culture-lab/",
 
