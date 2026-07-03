@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Maze Mission - 認知症予防ゲーム</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: #ffffff;
+            touch-action: none;
+        }
+        canvas {
+            display: block;
+        }
+        .senior-text {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        .senior-button {
+            min-width: 200px;
+            min-height: 80px;
+            font-size: 32px;
+            border-radius: 16px;
+            transition: transform 0.1s;
+        }
+        .senior-button:active {
+            transform: scale(0.95);
+        }
+        .mission-overlay {
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 10px solid #facc15; /* Yellow */
+            width: 90%;
+            max-width: 600px;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        .interactive {
+            pointer-events: auto;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- プレイ中タイム表示（画面右上、高齢者向けに大きく配置） -->
+    <div id="gameplay-ui" class="absolute top-4 right-4 bg-white/90 border-4 border-slate-700 px-6 py-3 rounded-2xl z-20 hidden">
+        <div id="gameplay-timer" class="text-4xl font-bold font-mono text-slate-800">タイム: 00:00</div>
+    </div>
+
+    <div id="ui-layer">
+        <!-- Title Screen -->
+        <div id="screen-title" class="interactive flex flex-col items-center gap-8 text-center p-6 fade-in">
+            <h1 class="text-6xl font-black mb-4 text-black">Maze Mission</h1>
+            <p class="senior-text text-gray-700 mb-8">体を動かして脳を鍛えよう！</p>
+            <button id="btn-start" class="senior-button bg-blue-600 text-white shadow-xl hover:bg-blue-700">ゲームを始める</button>
+        </div>
+
+        <!-- Difficulty Selection -->
+        <div id="screen-difficulty" class="interactive hidden flex flex-col items-center gap-6 text-center p-6 fade-in">
+            <h2 class="senior-text mb-4">むずかしさをえらんでください</h2>
+            <button data-size="10" class="senior-button bg-green-500 text-white shadow-lg hover:bg-green-600">かんたん (10x10)</button>
+            <button data-size="15" class="senior-button bg-yellow-500 text-white shadow-lg hover:bg-yellow-600">ふつう (15x15)</button>
+            <button data-size="20" class="senior-button bg-red-500 text-white shadow-lg hover:bg-red-600">むずかしい (20x20)</button>
+            <button id="btn-back-title" class="senior-button bg-gray-400 text-white shadow-lg hover:bg-gray-500 mt-4">もどる</button>
+        </div>
+
+        <!-- Mission Alert -->
+        <div id="mission-alert" class="interactive hidden mission-overlay p-8 rounded-3xl text-center shadow-2xl fade-in flex flex-col items-center">
+            <h2 class="text-4xl font-bold text-red-600 mb-4">⚠️ ミッション発生！</h2>
+            <p id="mission-text" class="senior-text mb-4 font-black text-black">ここにミッションが表示されます</p>
+            
+            <!-- 達成度ゲージ -->
+            <div class="w-full bg-gray-200 rounded-full h-10 overflow-hidden mb-2 mt-2 border-4 border-slate-700">
+                <div id="mission-progress-bar" class="bg-green-500 h-full w-0 transition-all duration-100"></div>
+            </div>
+            <div id="mission-progress-percent" class="text-4xl font-extrabold text-green-600 mb-4">0%</div>
+
+            <div id="mission-timer" class="text-5xl font-mono font-bold text-blue-600 mb-2">10</div>
+            <p class="text-2xl text-gray-600">失敗するとスタートに戻ります</p>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="screen-result" class="interactive hidden flex flex-col items-center gap-6 text-center p-6 fade-in">
+            <h2 class="text-6xl font-bold text-green-600 mb-4">🎉 ゴール！</h2>
+            <p id="result-time" class="senior-text mb-8">タイム: 00:00</p>
+            <button id="btn-next-stage" class="senior-button bg-blue-600 text-white shadow-xl hover:bg-blue-700">つぎのステージへ</button>
+            <button id="btn-result-title" class="senior-button bg-gray-400 text-white shadow-lg hover:bg-gray-500">タイトルへもどる</button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        /**
+         * SoundManager: Web Audio APIを使用した効果音＆BGM生成
+         */
+        class SoundManager {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.bgmTimer = null;
+                this.isPlayingBGM = false;
+            }
+
+            playTone(freq, type, duration, volume = 0.1) {
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+
+            playSuccess() {
+                this.playTone(523.25, 'sine', 0.2, 0.15); // C5
+                setTimeout(() => this.playTone(659.25, 'sine', 0.3, 0.15), 100); // E5
+            }
+
+            playFail() {
+                this.playTone(220, 'sawtooth', 0.5, 0.08); // A3
+            }
+
+            playClear() {
+                const notes = [523, 659, 783, 1046];
+                notes.forEach((n, i) => {
+                    setTimeout(() => this.playTone(n, 'triangle', 0.4, 0.15), i * 150);
+                });
+            }
+
+            playButton() {
+                this.playTone(440, 'sine', 0.1, 0.1);
+            }
+
+            startBGM() {
+                this.stopBGM();
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+                this.isPlayingBGM = true;
+
+                // 電子音の迷宮・サイバーダンジョン風 シンセサイザー周波数定義(Hz)
+                const N = {
+                    A2: 110.00, C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, Gs3: 207.65, A3: 220.00,
+                    C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, Gs4: 415.30, A4: 440.00, B4: 493.88,
+                    C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, Gs5: 830.61, A5: 880.00, B5: 987.77,
+                    C6: 1046.50, E6: 1318.51, 0: 0
+                };
+
+                // 迷宮・探索感のある16分音符アルペジオ＆ベースシーケンス (32ステップ)
+                // 各ステップ: [ベース音(ノコギリ波), アルペジオ(矩形波/三角波)]
+                const sequence = [
+                    // Am (神秘的なサイバーダンジョンの入り口)
+                    [N.A2, N.A4], [0, N.C5], [N.A3, N.E5], [0, N.A5], [N.E3, N.E5], [0, N.C5], [N.A3, N.A4], [0, N.E4],
+                    // Fmaj7 (浮遊感のある未来派通路)
+                    [N.F3, N.F4], [0, N.A4], [N.C4, N.C5], [0, N.E5], [N.F3, N.C5], [0, N.A4], [N.C4, N.F4], [0, N.C4],
+                    // Dm (深まる迷宮と謎解きの緊張感)
+                    [N.D3, N.D4], [0, N.F4], [N.A3, N.A4], [0, N.D5], [N.F3, N.A4], [0, N.F4], [N.A3, N.D4], [0, N.A3],
+                    // Esus4 / E7 (次のフロアへの神秘的なドア)
+                    [N.E3, N.E4], [0, N.Gs4], [N.B3, N.B4], [0, N.E5], [N.Gs3, N.D5], [0, N.B4], [N.E3, N.Gs4], [0, N.E4]
+                ];
+
+                let step = 0;
+                const stepMs = 130; // 1ステップの長さ(ミリ秒)
+
+                const playNextStep = () => {
+                    if (!this.isPlayingBGM) return;
+
+                    const [bassFreq, arpFreq] = sequence[step];
+
+                    // 低音ベーストラック (sawtooth: 重厚でダンジョンらしい電子音)
+                    if (bassFreq > 0) {
+                        this.playTone(bassFreq, 'sawtooth', (stepMs / 1000) * 0.9, 0.035);
+                    }
+                    // 高音アルペジオトラック (square: ピコピコとした神秘的サイバー感)
+                    if (arpFreq > 0) {
+                        this.playTone(arpFreq, 'square', (stepMs / 1000) * 0.85, 0.03);
+                    }
+
+                    step = (step + 1) % sequence.length;
+                    this.bgmTimer = setTimeout(playNextStep, stepMs);
+                };
+
+                playNextStep();
+            }
+
+            stopBGM() {
+                this.isPlayingBGM = false;
+                if (this.bgmTimer) {
+                    clearTimeout(this.bgmTimer);
+                    this.bgmTimer = null;
+                }
+            }
+        }
+
+        /**
+         * InputManager: 傾きセンサーとキーボード入力を管理
+         */
+        class InputManager {
+            constructor() {
+                this.tiltX = 0; // 左右傾き
+                this.tiltY = 0; // 前後傾き
+                this.keys = {};
+                this.lastAcc = { x: 0, y: 0, z: 0 };
+                this.shakeCount = 0;
+
+                window.addEventListener('keydown', e => this.keys[e.code] = true);
+                window.addEventListener('keyup', e => this.keys[e.code] = false);
+
+                if (window.DeviceOrientationEvent) {
+                    window.addEventListener('deviceorientation', (e) => {
+                        this.tiltX = e.gamma || 0;
+                        this.tiltY = e.beta || 0;
+                    });
+                }
+
+                if (window.DeviceMotionEvent) {
+                    window.addEventListener('devicemotion', (e) => {
+                        const acc = e.accelerationIncludingGravity;
+                        if (!acc) return;
+                        const deltaX = Math.abs(acc.x - this.lastAcc.x);
+                        const deltaY = Math.abs(acc.y - this.lastAcc.y);
+                        const deltaZ = Math.abs(acc.z - this.lastAcc.z);
+                        if (deltaX + deltaY + deltaZ > 15) {
+                            this.shakeCount++;
+                        }
+                        this.lastAcc = { x: acc.x, y: acc.y, z: acc.z };
+                    });
+                }
+            }
+
+            getMovement() {
+                let mx = 0;
+                let my = 0;
+                const deadzone = 5;
+
+                if (Math.abs(this.tiltX) > deadzone) mx = this.tiltX / 45;
+                if (Math.abs(this.tiltY) > deadzone) my = this.tiltY / 45;
+
+                if (this.keys['ArrowLeft'] || this.keys['KeyA']) mx = -1;
+                if (this.keys['ArrowRight'] || this.keys['KeyD']) mx = 1;
+                if (this.keys['ArrowUp'] || this.keys['KeyW']) my = -1;
+                if (this.keys['ArrowDown'] || this.keys['KeyS']) my = 1;
+
+                // 速度制限
+                mx = Math.max(-1, Math.min(1, mx));
+                my = Math.max(-1, Math.min(1, my));
+
+                return { x: mx, y: my };
+            }
+
+            resetShake() {
+                this.shakeCount = 0;
+            }
+        }
+
+        /**
+         * Maze: 迷路の生成と管理
+         */
+        class Maze {
+            constructor(size) {
+                this.size = size;
+                this.generate();
+            }
+
+            generate() {
+                const grid = Array.from({ length: this.size * 2 + 1 }, () => Array(this.size * 2 + 1).fill(1));
+                const visited = Array.from({ length: this.size }, () => Array(this.size).fill(false));
+                const stack = [];
+                
+                let cx = 0, cy = 0;
+                visited[cy][cx] = true;
+                grid[cy * 2 + 1][cx * 2 + 1] = 0;
+
+                const dirs = [
+                    { dx: 0, dy: -1, wx: 0, wy: -1 },
+                    { dx: 1, dy: 0, wx: 1, wy: 0 },
+                    { dx: 0, dy: 1, wx: 0, wy: 1 },
+                    { dx: -1, dy: 0, wx: -1, wy: 0 }
+                ];
+
+                while (true) {
+                    const neighbors = dirs.filter(d => {
+                        const nx = cx + d.dx;
+                        const ny = cy + d.dy;
+                        return nx >= 0 && nx < this.size && ny >= 0 && ny < this.size && !visited[ny][nx];
+                    });
+
+                    if (neighbors.length > 0) {
+                        const d = neighbors[Math.floor(Math.random() * neighbors.length)];
+                        grid[cy * 2 + 1 + d.wy][cx * 2 + 1 + d.wx] = 0;
+                        grid[(cy + d.dy) * 2 + 1][(cx + d.dx) * 2 + 1] = 0;
+                        visited[cy + d.dy][cx + d.dx] = true;
+                        stack.push({ x: cx, y: cy });
+                        cx += d.dx;
+                        cy += d.dy;
+                    } else if (stack.length > 0) {
+                        const p = stack.pop();
+                        cx = p.x; cy = p.y;
+                    } else break;
+                }
+                this.grid = grid;
+            }
+        }
+
+        /**
+         * Ball: ボールの物理挙動
+         */
+        class Ball {
+            constructor(startX, startY, radius) {
+                this.x = startX;
+                this.y = startY;
+                this.vx = 0;
+                this.vy = 0;
+                this.radius = radius;
+                this.friction = 0.95;
+                this.accel = 0.6;
+            }
+
+            update(input, maze, cellSize) {
+                this.vx += input.x * this.accel;
+                this.vy += input.y * this.accel;
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+
+                let nextX = this.x + this.vx;
+                let nextY = this.y + this.vy;
+
+                if (this.checkCollision(nextX, this.y, maze, cellSize)) {
+                    this.vx = 0;
+                    nextX = this.x;
+                }
+                if (this.checkCollision(this.x, nextY, maze, cellSize)) {
+                    this.vy = 0;
+                    nextY = this.y;
+                }
+
+                this.x = nextX;
+                this.y = nextY;
+            }
+
+            checkCollision(x, y, maze, cellSize) {
+                const margin = this.radius * 0.8;
+                const points = [
+                    { x: x - margin, y: y - margin },
+                    { x: x + margin, y: y - margin },
+                    { x: x - margin, y: y + margin },
+                    { x: x + margin, y: y + margin }
+                ];
+                for (let p of points) {
+                    const gx = Math.floor(p.x / cellSize);
+                    const gy = Math.floor(p.y / cellSize);
+                    if (gx < 0 || gx >= maze.grid[0].length || gy < 0 || gy >= maze.grid.length) return true;
+                    if (maze.grid[gy][gx] === 1) return true;
+                }
+                return false;
+            }
+        }
+
+        /**
+         * MissionManager: ミッションの管理と達成度表示
+         */
+        class MissionManager {
+            constructor(game) {
+                this.game = game;
+                this.currentMission = null;
+                this.timer = 0;
+                this.accumulatedTime = 0; // 静止・保持ミッションの時間計測用
+                this.initialDistance = 0; // 移動ミッション用
+
+                this.missionTypes = [
+                    { 
+                        id: 'SHAKE', 
+                        text: '5秒間端末を振る！(たくさん振って！)', 
+                        duration: 7, 
+                        getProgress: () => Math.min(100, Math.floor((this.game.input.shakeCount / 20) * 100)),
+                        check: () => this.game.input.shakeCount >= 20 
+                    },
+                    { 
+                        id: 'STILL', 
+                        text: '5秒間、ボールを動かさないで！', 
+                        duration: 7, 
+                        getProgress: () => Math.min(100, Math.floor((this.accumulatedTime / 5) * 100)),
+                        check: (dt) => {
+                            const isStill = Math.abs(this.game.ball.vx) < 0.15 && Math.abs(this.game.ball.vy) < 0.15;
+                            if (isStill) this.accumulatedTime += dt;
+                            else this.accumulatedTime = Math.max(0, this.accumulatedTime - dt * 0.5); // 動くと少し減る
+                            return this.accumulatedTime >= 5;
+                        }
+                    },
+                    { 
+                        id: 'TILT_LEFT', 
+                        text: '3秒間、左へ傾けてキープして！', 
+                        duration: 6, 
+                        getProgress: () => Math.min(100, Math.floor((this.accumulatedTime / 3) * 100)),
+                        check: (dt) => {
+                            const isLeft = this.game.input.tiltX < -15 || this.game.input.keys['ArrowLeft'] || this.game.input.keys['KeyA'];
+                            if (isLeft) this.accumulatedTime += dt;
+                            else this.accumulatedTime = Math.max(0, this.accumulatedTime - dt);
+                            return this.accumulatedTime >= 3;
+                        }
+                    },
+                    { 
+                        id: 'TILT_RIGHT', 
+                        text: '3秒間、右へ傾けてキープして！', 
+                        duration: 6, 
+                        getProgress: () => Math.min(100, Math.floor((this.accumulatedTime / 3) * 100)),
+                        check: (dt) => {
+                            const isRight = this.game.input.tiltX > 15 || this.game.input.keys['ArrowRight'] || this.game.input.keys['KeyD'];
+                            if (isRight) this.accumulatedTime += dt;
+                            else this.accumulatedTime = Math.max(0, this.accumulatedTime - dt);
+                            return this.accumulatedTime >= 3;
+                        }
+                    },
+                    { 
+                        id: 'TILT_UP', 
+                        text: '3秒間、上へ傾けてキープして！', 
+                        duration: 6, 
+                        getProgress: () => Math.min(100, Math.floor((this.accumulatedTime / 3) * 100)),
+                        check: (dt) => {
+                            const isUp = this.game.input.tiltY < -15 || this.game.input.keys['ArrowUp'] || this.game.input.keys['KeyW'];
+                            if (isUp) this.accumulatedTime += dt;
+                            else this.accumulatedTime = Math.max(0, this.accumulatedTime - dt);
+                            return this.accumulatedTime >= 3;
+                        }
+                    },
+                    { 
+                        id: 'TILT_DOWN', 
+                        text: '3秒間、下へ傾けてキープして！', 
+                        duration: 6, 
+                        getProgress: () => Math.min(100, Math.floor((this.accumulatedTime / 3) * 100)),
+                        check: (dt) => {
+                            const isDown = this.game.input.tiltY > 15 || this.game.input.keys['ArrowDown'] || this.game.input.keys['KeyS'];
+                            if (isDown) this.accumulatedTime += dt;
+                            else this.accumulatedTime = Math.max(0, this.accumulatedTime - dt);
+                            return this.accumulatedTime >= 3;
+                        }
+                    }
+                ];
+            }
+
+            startRandomMission() {
+                if (this.currentMission) return;
+                const type = this.missionTypes[Math.floor(Math.random() * this.missionTypes.length)];
+                this.currentMission = { ...type };
+                this.timer = this.currentMission.duration;
+                this.accumulatedTime = 0;
+
+                this.game.ui.showMission(this.currentMission.text);
+                this.game.input.resetShake();
+            }
+
+            update(dt) {
+                if (!this.currentMission) return;
+                this.timer -= dt;
+                this.game.ui.updateMissionTimer(Math.ceil(this.timer));
+
+                // 進行度取得
+                const progress = this.currentMission.getProgress();
+                this.game.ui.updateMissionProgress(progress);
+
+                if (this.currentMission.check(dt)) {
+                    this.complete();
+                } else if (this.timer <= 0) {
+                    this.fail();
+                }
+            }
+
+            complete() {
+                this.game.sound.playSuccess();
+                this.game.ui.hideMission();
+                this.currentMission = null;
+            }
+
+            fail() {
+                this.game.sound.playFail();
+                this.game.ui.hideMission();
+                this.currentMission = null;
+                this.game.resetPlayer();
+            }
+        }
+
+        /**
+         * Game: 全体制御
+         */
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.sound = new SoundManager();
+                this.input = new InputManager();
+                this.state = 'TITLE';
+                this.mazeSize = 10;
+                this.maze = null;
+                this.ball = null;
+                this.missionManager = new MissionManager(this);
+                this.startTime = 0;
+                this.elapsedTime = 0;
+                this.initUI();
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                this.lastTime = 0;
+                requestAnimationFrame((t) => this.loop(t));
+            }
+
+            initUI() {
+                this.ui = {
+                    screens: {
+                        title: document.getElementById('screen-title'),
+                        difficulty: document.getElementById('screen-difficulty'),
+                        mission: document.getElementById('mission-alert'),
+                        result: document.getElementById('screen-result'),
+                    },
+                    missionText: document.getElementById('mission-text'),
+                    missionTimer: document.getElementById('mission-timer'),
+                    missionProgressBar: document.getElementById('mission-progress-bar'),
+                    missionProgressPercent: document.getElementById('mission-progress-percent'),
+                    resultTime: document.getElementById('result-time'),
+                    gameplayUI: document.getElementById('gameplay-ui'),
+                    gameplayTimer: document.getElementById('gameplay-timer'),
+                    showMission: (text) => {
+                        this.ui.screens.mission.classList.remove('hidden');
+                        this.ui.missionText.innerText = text;
+                        this.ui.updateMissionProgress(0);
+                    },
+                    updateMissionTimer: (val) => {
+                        this.ui.missionTimer.innerText = `${val}秒`;
+                    },
+                    updateMissionProgress: (percent) => {
+                        this.ui.missionProgressBar.style.width = `${percent}%`;
+                        this.ui.missionProgressPercent.innerText = `${percent}%`;
+                    },
+                    hideMission: () => {
+                        this.ui.screens.mission.classList.add('hidden');
+                    },
+                    showScreen: (name) => {
+                        Object.values(this.ui.screens).forEach(s => s.classList.add('hidden'));
+                        if (name !== 'none') this.ui.screens[name].classList.remove('hidden');
+                    }
+                };
+
+                document.getElementById('btn-start').onclick = () => {
+                    this.sound.playButton();
+                    this.requestOrientationPermission().then(() => {
+                        this.ui.showScreen('difficulty');
+                        this.state = 'DIFFICULTY';
+                    });
+                };
+                document.querySelectorAll('[data-size]').forEach(btn => {
+                    btn.onclick = () => {
+                        this.sound.playButton();
+                        this.mazeSize = parseInt(btn.dataset.size);
+                        this.startGame();
+                    };
+                });
+                document.getElementById('btn-back-title').onclick = () => {
+                    this.sound.playButton();
+                    this.sound.stopBGM();
+                    this.ui.showScreen('title');
+                    this.state = 'TITLE';
+                };
+                document.getElementById('btn-next-stage').onclick = () => {
+                    this.sound.playButton();
+                    this.sound.stopBGM();
+                    this.ui.showScreen('difficulty');
+                    this.state = 'DIFFICULTY';
+                };
+                document.getElementById('btn-result-title').onclick = () => {
+                    this.sound.playButton();
+                    this.sound.stopBGM();
+                    this.ui.showScreen('title');
+                    this.state = 'TITLE';
+                };
+            }
+
+            async requestOrientationPermission() {
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    try {
+                        const permission = await DeviceOrientationEvent.requestPermission();
+                        return permission === 'granted';
+                    } catch (e) { return false; }
+                }
+                return true;
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                if (this.maze) {
+                    this.cellSize = Math.min(this.canvas.width * 0.9, this.canvas.height * 0.8) / (this.mazeSize * 2 + 1);
+                }
+            }
+
+            startGame() {
+                this.maze = new Maze(this.mazeSize);
+                // 画面を広めにとる
+                this.cellSize = Math.min(this.canvas.width * 0.9, this.canvas.height * 0.8) / (this.mazeSize * 2 + 1);
+                
+                // スタート地点は (1, 1) セルの中心。セルサイズに基づく座標
+                this.ball = new Ball(this.cellSize * 1.5, this.cellSize * 1.5, this.cellSize * 0.35);
+                this.startTime = Date.now();
+                this.state = 'PLAYING';
+                this.ui.showScreen('none');
+                this.ui.gameplayUI.classList.remove('hidden');
+                this.sound.startBGM();
+            }
+
+            resetPlayer() {
+                this.ball.x = this.cellSize * 1.5;
+                this.ball.y = this.cellSize * 1.5;
+                this.ball.vx = 0;
+                this.ball.vy = 0;
+            }
+
+            loop(timestamp) {
+                const dt = (timestamp - this.lastTime) / 1000;
+                this.lastTime = timestamp;
+                if (this.state === 'PLAYING') {
+                    this.update(dt);
+                    this.draw();
+                }
+                requestAnimationFrame((t) => this.loop(t));
+            }
+
+            update(dt) {
+                this.ball.update(this.input.getMovement(), this.maze, this.cellSize);
+                this.elapsedTime = (Date.now() - this.startTime) / 1000;
+
+                // タイム表示のリアルタイム更新
+                const mins = Math.floor(this.elapsedTime / 60);
+                const secs = Math.floor(this.elapsedTime % 60);
+                this.ui.gameplayTimer.innerText = `タイム: ${mins}:${secs.toString().padStart(2, '0')}`;
+
+                // ミッションの定期抽選 (プレイ中かつ未発生時)
+                if (!this.missionManager.currentMission && Math.random() < 0.003) {
+                    this.missionManager.startRandomMission();
+                }
+                this.missionManager.update(dt);
+
+                // ゴール判定の修正: ゴールセルは (size * 2 - 1, size * 2 - 1) 通路内の一番奥
+                const goalGridX = this.mazeSize * 2 - 1;
+                const goalGridY = this.mazeSize * 2 - 1;
+                const goalX = (goalGridX + 0.5) * this.cellSize;
+                const goalY = (goalGridY + 0.5) * this.cellSize;
+
+                if (Math.hypot(this.ball.x - goalX, this.ball.y - goalY) < this.cellSize * 0.6) {
+                    this.win();
+                }
+            }
+
+            win() {
+                this.state = 'RESULT';
+                this.sound.stopBGM();
+                this.sound.playClear();
+                this.ui.gameplayUI.classList.add('hidden');
+                const mins = Math.floor(this.elapsedTime / 60);
+                const secs = Math.floor(this.elapsedTime % 60);
+                this.ui.resultTime.innerText = `タイム: ${mins}:${secs.toString().padStart(2, '0')}`;
+                this.ui.showScreen('result');
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 迷路のセンタリングオフセット
+                const offsetX = (this.canvas.width - this.maze.grid[0].length * this.cellSize) / 2;
+                const offsetY = (this.canvas.height - this.maze.grid.length * this.cellSize) / 2;
+
+                this.ctx.save();
+                this.ctx.translate(offsetX, offsetY);
+
+                // 1. 迷路の地面（白色で高齢者にも見やすく）
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.fillRect(0, 0, this.maze.grid[0].length * this.cellSize, this.maze.grid.length * this.cellSize);
+
+                // 2. 迷路の太い壁を描画
+                this.ctx.fillStyle = '#1e293b'; // Slate 800 (濃い色でコントラストを最大に)
+                for (let y = 0; y < this.maze.grid.length; y++) {
+                    for (let x = 0; x < this.maze.grid[0].length; x++) {
+                        if (this.maze.grid[y][x] === 1) {
+                            this.ctx.fillRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
+                        }
+                    }
+                }
+
+                // 3. ゴール（迷路の最後の通路 (size * 2 - 1) に完全に配置する）
+                const goalGridX = this.mazeSize * 2 - 1;
+                const goalGridY = this.mazeSize * 2 - 1;
+                const gx = goalGridX * this.cellSize;
+                const gy = goalGridY * this.cellSize;
+
+                this.ctx.fillStyle = '#10b981'; // Green-500
+                this.ctx.fillRect(gx, gy, this.cellSize, this.cellSize);
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.font = 'bold 16px sans-serif';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText('GOAL', gx + this.cellSize / 2, gy + this.cellSize / 2);
+
+                // 4. プレイヤー（ボール）の描画
+                this.ctx.beginPath();
+                this.ctx.arc(this.ball.x, this.ball.y, this.ball.radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#3b82f6'; // 明るい青
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#1d4ed8'; // 濃い青
+                this.ctx.lineWidth = 4;
+                this.ctx.stroke();
+
+                this.ctx.restore();
+            }
+        }
+
+        window.onload = () => { new Game(); };
+    </script>
+</body>
+</html>
