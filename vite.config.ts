@@ -34,10 +34,15 @@ function copyLandingFiles(): Plugin {
       cpSync(calculateCurlingDistDir, calculateCurlingOutputDir, { recursive: true });
 
       const mazeMissionDir = path.resolve(__dirname, "games/Maze-Mission");
-const mazeMissionOutputDir = path.resolve(distDir, "games/Maze-Mission");
+      const mazeMissionOutputDir = path.resolve(distDir, "games/Maze-Mission");
+      rmSync(mazeMissionOutputDir, { recursive: true, force: true });
+      cpSync(mazeMissionDir, mazeMissionOutputDir, { recursive: true });
 
-rmSync(mazeMissionOutputDir, { recursive: true, force: true });
-cpSync(mazeMissionDir, mazeMissionOutputDir, { recursive: true });
+      // gamesフォルダを丸ごとコピー
+      const gamesDir = path.resolve(__dirname, "games");
+      const gamesOutputDir = path.resolve(distDir, "games");    
+      rmSync(gamesOutputDir, { recursive: true, force: true });
+      cpSync(gamesDir, gamesOutputDir, { recursive: true });
     },
   };
 }
