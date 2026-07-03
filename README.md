@@ -1,10 +1,14 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
 ![Codex](https://img.shields.io/badge/OpenAI_Codex-412991?style=for-the-badge&logo=openai&logoColor=white)
+
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-222222?style=for-the-badge&logo=githubpages&logoColor=white)](https://airubb.github.io/culture-lab/)
 
-![Deploy](https://github.com/airubb/culture-lab/actions/workflows/deploy.yml/badge.svg)
+![Pages Deploy](https://github.com/airubb/culture-lab/actions/workflows/pages-build-deployment/badge.svg)
+![CI](https://github.com/airubb/culture-lab/actions/workflows/deploy.yml/badge.svg)
 
 ## 目次
 
