@@ -1,0 +1,213 @@
+:root {
+  color: #0f172a;
+  background: #f8fafc;
+  font-family: "Hiragino Sans", "Yu Gothic", "Yu Gothic UI", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 34rem),
+    linear-gradient(180deg, #eff6ff 0%, #f8fafc 42%);
+}
+
+.site-header {
+  padding: 4rem 1.5rem 2.5rem;
+  text-align: center;
+}
+
+.header-inner,
+.games-section {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  color: #2563eb;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 1rem;
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  line-height: 1;
+}
+
+.lead {
+  max-width: 42rem;
+  margin: 0 auto;
+  color: #475569;
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  font-weight: 700;
+  line-height: 1.8;
+}
+
+.page-main {
+  padding: 0 1.5rem 4rem;
+}
+
+.section-heading {
+  margin-bottom: 1.5rem;
+}
+
+.section-heading h2 {
+  margin-bottom: 0.35rem;
+  font-size: clamp(1.6rem, 4vw, 2.25rem);
+}
+
+.section-heading p {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+}
+
+.game-card {
+  overflow: hidden;
+  min-height: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.game-card[href]:hover,
+.game-card[href]:focus-visible {
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 24px 60px rgba(37, 99, 235, 0.16);
+  transform: translateY(-4px);
+}
+
+.game-card.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.game-thumbnail {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.placeholder-thumbnail {
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(135deg, var(--placeholder-start), var(--placeholder-end)),
+    #2563eb;
+  color: white;
+  font-size: clamp(3rem, 9vw, 5rem);
+  font-weight: 900;
+  letter-spacing: -0.12em;
+  text-shadow: 0 8px 24px rgba(15, 23, 42, 0.28);
+}
+
+.game-card-body {
+  padding: 1.25rem;
+}
+
+.game-card-body h3 {
+  margin-bottom: 0.65rem;
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.game-description {
+  min-height: 4.5em;
+  margin-bottom: 1rem;
+  color: #475569;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+.status-released {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-coming-soon {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag-list li {
+  border-radius: 999px;
+  background: #eff6ff;
+  padding: 0.25rem 0.6rem;
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.loading-message,
+.empty-message,
+.error-message {
+  grid-column: 1 / -1;
+  border-radius: 1rem;
+  background: white;
+  padding: 1.5rem;
+  color: #475569;
+  font-weight: 800;
+  text-align: center;
+}
+
+.error-message {
+  color: #b91c1c;
+}
+
+.site-footer {
+  padding: 2rem 1.5rem;
+  color: #64748b;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .site-header {
+    padding-top: 3rem;
+  }
+
+  .game-grid {
+    grid-template-columns: 1fr;
+  }
+}

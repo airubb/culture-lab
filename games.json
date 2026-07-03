@@ -1,0 +1,22 @@
+[
+  {
+    "id": "medal-block-slot",
+    "title": "メダルブロック・スロット",
+    "description": "スロットを止めてボールを発射し、ブロックを崩してメダルを集めるゲームです。",
+    "thumbnail": null,
+    "path": "games/medal-block-slot/",
+    "status": "released",
+    "tags": ["スロット", "ブロック崩し"],
+    "addedDate": "2026-07-03"
+  },
+  {
+    "id": "next-game",
+    "title": "次回作（準備中）",
+    "description": "今後追加予定のゲームです。公開までしばらくお待ちください。",
+    "thumbnail": null,
+    "path": null,
+    "status": "coming-soon",
+    "tags": ["近日公開"],
+    "addedDate": "2026-07-03"
+  }
+]

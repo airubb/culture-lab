@@ -1,12 +1,37 @@
 <!doctype html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Arena Web Dev App</title>
+    <meta name="description" content="Culture Labで公開しているゲーム一覧です。" />
+    <title>Culture Lab ゲーム置き場</title>
+    <link rel="stylesheet" href="assets/landing/style.css" />
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <header class="site-header">
+      <div class="header-inner">
+        <p class="eyebrow">Culture Lab</p>
+        <h1>ゲーム置き場</h1>
+        <p class="lead">公開中・開発予定のゲームを一覧から選んで遊べます。</p>
+      </div>
+    </header>
+
+    <main class="page-main">
+      <section class="games-section" aria-labelledby="games-heading">
+        <div class="section-heading">
+          <h2 id="games-heading">ゲーム一覧</h2>
+          <p>カードを選択すると、公開中のゲームページへ移動します。</p>
+        </div>
+        <div id="game-grid" class="game-grid" aria-live="polite">
+          <p class="loading-message">ゲーム一覧を読み込んでいます...</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <small>&copy; Culture Lab</small>
+    </footer>
+
+    <script type="module" src="assets/landing/main.js"></script>
   </body>
 </html>
