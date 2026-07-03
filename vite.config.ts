@@ -32,6 +32,12 @@ function copyLandingFiles(): Plugin {
       const calculateCurlingOutputDir = path.resolve(distDir, "games/calculate-curling");
       rmSync(calculateCurlingOutputDir, { recursive: true, force: true });
       cpSync(calculateCurlingDistDir, calculateCurlingOutputDir, { recursive: true });
+
+      const mazeMissionDir = path.resolve(__dirname, "games/Maze-Mission");
+const mazeMissionOutputDir = path.resolve(distDir, "games/Maze-Mission");
+
+rmSync(mazeMissionOutputDir, { recursive: true, force: true });
+cpSync(mazeMissionDir, mazeMissionOutputDir, { recursive: true });
     },
   };
 }
