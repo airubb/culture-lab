@@ -10,6 +10,13 @@
     "addedDate": "2026-07-03"
   },
   {
+  "id": "calculation-curling",
+  "title": "計算カーリング",
+  "description": "カーリングで四則演算に挑戦するゲーム",
+  "thumbnail": "assets/landing/calculation-curling.png",
+  "url": "games/calculation-curling/"
+}
+  {
     "id": "next-game",
     "title": "次回作（準備中）",
     "description": "今後追加予定のゲームです。公開までしばらくお待ちください。",
