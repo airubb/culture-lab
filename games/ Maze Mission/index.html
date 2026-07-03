@@ -1,664 +1,741 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Maze Mission - 認知症予防ゲーム</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: #ffffff;
+            touch-action: none;
+        }
+        canvas {
+            display: block;
+        }
+        .senior-text {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        .senior-button {
+            min-width: 200px;
+            min-height: 80px;
+            font-size: 32px;
+            border-radius: 16px;
+            transition: transform 0.1s;
+        }
+        .senior-button:active {
+            transform: scale(0.95);
+        }
+        .mission-overlay {
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 10px solid #facc15; /* Yellow */
+            width: 90%;
+            max-width: 600px;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        .interactive {
+            pointer-events: auto;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
 
-ゲームのアップロード方法を確認する
-7月4日
-·
-airubb/culture-lab
-·
-codex-sjhhwx
-·
-+40
--28
+    <!-- プレイ中タイム表示（画面右上、高齢者向けに大きく配置） -->
+    <div id="gameplay-ui" class="absolute top-4 right-4 bg-white/90 border-4 border-slate-700 px-6 py-3 rounded-2xl z-20 hidden">
+        <div id="gameplay-timer" class="text-4xl font-bold font-mono text-slate-800">タイム: 00:00</div>
+    </div>
 
-アーカイブ
+    <div id="ui-layer">
+        <!-- Title Screen -->
+        <div id="screen-title" class="interactive flex flex-col items-center gap-8 text-center p-6 fade-in">
+            <h1 class="text-6xl font-black mb-4 text-black">Maze Mission</h1>
+            <p class="senior-text text-gray-700 mb-8">体を動かして脳を鍛えよう！</p>
+            <button id="btn-start" class="senior-button bg-blue-600 text-white shadow-xl hover:bg-blue-700">ゲームを始める</button>
+        </div>
 
-共有する
-PR を表示する
+        <!-- Difficulty Selection -->
+        <div id="screen-difficulty" class="interactive hidden flex flex-col items-center gap-6 text-center p-6 fade-in">
+            <h2 class="senior-text mb-4">むずかしさをえらんでください</h2>
+            <button data-size="10" class="senior-button bg-green-500 text-white shadow-lg hover:bg-green-600">かんたん (10x10)</button>
+            <button data-size="15" class="senior-button bg-yellow-500 text-white shadow-lg hover:bg-yellow-600">ふつう (15x15)</button>
+            <button data-size="20" class="senior-button bg-red-500 text-white shadow-lg hover:bg-red-600">むずかしい (20x20)</button>
+            <button id="btn-back-title" class="senior-button bg-gray-400 text-white shadow-lg hover:bg-gray-500 mt-4">もどる</button>
+        </div>
 
+        <!-- Mission Alert -->
+        <div id="mission-alert" class="interactive hidden mission-overlay p-8 rounded-3xl text-center shadow-2xl fade-in flex flex-col items-center">
+            <h2 class="text-4xl font-bold text-red-600 mb-4">⚠️ ミッション発生！</h2>
+            <p id="mission-text" class="senior-text mb-4 font-black text-black">ここにミッションが表示されます</p>
+            
+            <!-- 達成度ゲージ -->
+            <div class="w-full bg-gray-200 rounded-full h-10 overflow-hidden mb-2 mt-2 border-4 border-slate-700">
+                <div id="mission-progress-bar" class="bg-green-500 h-full w-0 transition-all duration-100"></div>
+            </div>
+            <div id="mission-progress-percent" class="text-4xl font-extrabold text-green-600 mb-4">0%</div>
 
-新しくゲームをアップロードしたいのですがどうすればいいですか
-コピーする
-新しいゲームをアップロードする手順
-このリポジトリでは、トップページが games.json を読み込んでゲーム一覧カードを表示しています。games.json の各ゲームには id、title、description、thumbnail、path、status、tags、addedDate が定義されています。 
+            <div id="mission-timer" class="text-5xl font-mono font-bold text-blue-600 mb-2">10</div>
+            <p class="text-2xl text-gray-600">失敗するとスタートに戻ります</p>
+        </div>
 
-1. ゲーム用フォルダを作る
-games/ 配下に、新しいゲーム用のフォルダを作ります。
+        <!-- Result Screen -->
+        <div id="screen-result" class="interactive hidden flex flex-col items-center gap-6 text-center p-6 fade-in">
+            <h2 class="text-6xl font-bold text-green-600 mb-4">🎉 ゴール！</h2>
+            <p id="result-time" class="senior-text mb-8">タイム: 00:00</p>
+            <button id="btn-next-stage" class="senior-button bg-blue-600 text-white shadow-xl hover:bg-blue-700">つぎのステージへ</button>
+            <button id="btn-result-title" class="senior-button bg-gray-400 text-white shadow-lg hover:bg-gray-500">タイトルへもどる</button>
+        </div>
+    </div>
 
-例：
+    <canvas id="gameCanvas"></canvas>
 
-mkdir -p games/my-new-game
-既存の公開ゲームは games/medal-block-slot/ に置かれており、index.html がゲームページの入口になっています。 
+    <script>
+        /**
+         * SoundManager: Web Audio APIを使用した効果音＆BGM生成
+         */
+        class SoundManager {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.bgmTimer = null;
+                this.isPlayingBGM = false;
+            }
 
-例：
+            playTone(freq, type, duration, volume = 0.1) {
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
 
-games/
-  my-new-game/
-    index.html
-    style.css
-    main.js
-または、既存のReact/Vite構成に組み込む場合は、既存ゲームと同じように index.html からアプリを読み込む形にできます。現在の既存ゲームは /src/main.tsx を読み込んでいます。 
+            playSuccess() {
+                this.playTone(523.25, 'sine', 0.2, 0.15); // C5
+                setTimeout(() => this.playTone(659.25, 'sine', 0.3, 0.15), 100); // E5
+            }
 
-2. games.json にゲーム情報を追加する
-トップページに表示するには、games.json に新しいゲームを追加します。公開中にする場合は status を "released"、path をゲームフォルダへのパスにします。現在の公開ゲームも status: "released" と path: "games/medal-block-slot/" で登録されています。 
+            playFail() {
+                this.playTone(220, 'sawtooth', 0.5, 0.08); // A3
+            }
 
-例：
+            playClear() {
+                const notes = [523, 659, 783, 1046];
+                notes.forEach((n, i) => {
+                    setTimeout(() => this.playTone(n, 'triangle', 0.4, 0.15), i * 150);
+                });
+            }
 
-{
-  "id": "my-new-game",
-  "title": "新しいゲーム",
-  "description": "新しく追加したゲームです。",
-  "thumbnail": null,
-  "path": "games/my-new-game/",
-  "status": "released",
-  "tags": ["アクション", "パズル"],
-  "addedDate": "2026-07-03"
-}
-サムネイル画像を使いたい場合は、例えば以下のようにします。
+            playButton() {
+                this.playTone(440, 'sine', 0.1, 0.1);
+            }
 
-"thumbnail": "games/my-new-game/thumbnail.png"
-サムネイルが null の場合、トップページ側で自動的にプレースホルダーが表示されます。 
+            startBGM() {
+                this.stopBGM();
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+                this.isPlayingBGM = true;
 
-3. トップページで表示される仕組み
-トップページのHTMLには、ゲーム一覧を表示する #game-grid があり、JavaScriptがそこにカードを生成します。 
+                // 電子音の迷宮・サイバーダンジョン風 シンセサイザー周波数定義(Hz)
+                const N = {
+                    A2: 110.00, C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, Gs3: 207.65, A3: 220.00,
+                    C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, Gs4: 415.30, A4: 440.00, B4: 493.88,
+                    C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, Gs5: 830.61, A5: 880.00, B5: 987.77,
+                    C6: 1046.50, E6: 1318.51, 0: 0
+                };
 
-assets/landing/main.js は games.json を読み込み、ゲーム一覧を描画しています。 
+                // 迷宮・探索感のある16分音符アルペジオ＆ベースシーケンス (32ステップ)
+                // 各ステップ: [ベース音(ノコギリ波), アルペジオ(矩形波/三角波)]
+                const sequence = [
+                    // Am (神秘的なサイバーダンジョンの入り口)
+                    [N.A2, N.A4], [0, N.C5], [N.A3, N.E5], [0, N.A5], [N.E3, N.E5], [0, N.C5], [N.A3, N.A4], [0, N.E4],
+                    // Fmaj7 (浮遊感のある未来派通路)
+                    [N.F3, N.F4], [0, N.A4], [N.C4, N.C5], [0, N.E5], [N.F3, N.C5], [0, N.A4], [N.C4, N.F4], [0, N.C4],
+                    // Dm (深まる迷宮と謎解きの緊張感)
+                    [N.D3, N.D4], [0, N.F4], [N.A3, N.A4], [0, N.D5], [N.F3, N.A4], [0, N.F4], [N.A3, N.D4], [0, N.A3],
+                    // Esus4 / E7 (次のフロアへの神秘的なドア)
+                    [N.E3, N.E4], [0, N.Gs4], [N.B3, N.B4], [0, N.E5], [N.Gs3, N.D5], [0, N.B4], [N.E3, N.Gs4], [0, N.E4]
+                ];
 
-公開中のゲームだけリンクカードになります。条件は status === "released" かつ path があることです。 
+                let step = 0;
+                const stepMs = 130; // 1ステップの長さ(ミリ秒)
 
-つまり、トップページから遊べるようにするには、最低限この3点が必要です。
+                const playNextStep = () => {
+                    if (!this.isPlayingBGM) return;
 
-games/新しいゲームID/ にゲームファイルを置く
+                    const [bassFreq, arpFreq] = sequence[step];
 
-games.json にエントリを追加する
+                    // 低音ベーストラック (sawtooth: 重厚でダンジョンらしい電子音)
+                    if (bassFreq > 0) {
+                        this.playTone(bassFreq, 'sawtooth', (stepMs / 1000) * 0.9, 0.035);
+                    }
+                    // 高音アルペジオトラック (square: ピコピコとした神秘的サイバー感)
+                    if (arpFreq > 0) {
+                        this.playTone(arpFreq, 'square', (stepMs / 1000) * 0.85, 0.03);
+                    }
 
-status を "released"、path を "games/新しいゲームID/" にする
+                    step = (step + 1) % sequence.length;
+                    this.bgmTimer = setTimeout(playNextStep, stepMs);
+                };
 
-4. ビルド・公開について
-GitHub PagesへのデプロイはGitHub Actionsで設定されています。main または make-landing-page ブランチにpushされると、Node.js 20で npm ci と npm run build が実行され、dist がGitHub Pagesへアップロードされます。 
+                playNextStep();
+            }
 
-そのため、通常の流れは以下です。
+            stopBGM() {
+                this.isPlayingBGM = false;
+                if (this.bgmTimer) {
+                    clearTimeout(this.bgmTimer);
+                    this.bgmTimer = null;
+                }
+            }
+        }
 
-# 1. ゲームファイルを追加
-mkdir -p games/my-new-game
+        /**
+         * InputManager: 傾きセンサーとキーボード入力を管理
+         */
+        class InputManager {
+            constructor() {
+                this.tiltX = 0; // 左右傾き
+                this.tiltY = 0; // 前後傾き
+                this.keys = {};
+                this.lastAcc = { x: 0, y: 0, z: 0 };
+                this.shakeCount = 0;
 
-# 2. games.json に登録
+                window.addEventListener('keydown', e => this.keys[e.code] = true);
+                window.addEventListener('keyup', e => this.keys[e.code] = false);
 
-# 3. 動作確認
-npm run build
+                if (window.DeviceOrientationEvent) {
+                    window.addEventListener('deviceorientation', (e) => {
+                        this.tiltX = e.gamma || 0;
+                        this.tiltY = e.beta || 0;
+                    });
+                }
 
-# 4. commit / push
-git add games/my-new-game games.json
-git commit -m "Add my new game"
-git push
-もし私に作業を依頼する場合
-次の情報を送ってください。
+                if (window.DeviceMotionEvent) {
+                    window.addEventListener('devicemotion', (e) => {
+                        const acc = e.accelerationIncludingGravity;
+                        if (!acc) return;
+                        const deltaX = Math.abs(acc.x - this.lastAcc.x);
+                        const deltaY = Math.abs(acc.y - this.lastAcc.y);
+                        const deltaZ = Math.abs(acc.z - this.lastAcc.z);
+                        if (deltaX + deltaY + deltaZ > 15) {
+                            this.shakeCount++;
+                        }
+                        this.lastAcc = { x: acc.x, y: acc.y, z: acc.z };
+                    });
+                }
+            }
 
-ゲーム名
+            getMovement() {
+                let mx = 0;
+                let my = 0;
+                const deadzone = 5;
 
-ゲームのファイル一式、または実装したい内容
+                if (Math.abs(this.tiltX) > deadzone) mx = this.tiltX / 45;
+                if (Math.abs(this.tiltY) > deadzone) my = this.tiltY / 45;
 
-サムネイル画像を使うかどうか
+                if (this.keys['ArrowLeft'] || this.keys['KeyA']) mx = -1;
+                if (this.keys['ArrowRight'] || this.keys['KeyD']) mx = 1;
+                if (this.keys['ArrowUp'] || this.keys['KeyW']) my = -1;
+                if (this.keys['ArrowDown'] || this.keys['KeyS']) my = 1;
 
-tags に入れたいジャンル
+                // 速度制限
+                mx = Math.max(-1, Math.min(1, mx));
+                my = Math.max(-1, Math.min(1, my));
 
-すぐ公開するか、coming-soon として準備中表示にするか
+                return { x: mx, y: my };
+            }
 
-こちらで games/ 配下への配置、games.json への登録、ビルド確認まで対応できます。
+            resetShake() {
+                this.shakeCount = 0;
+            }
+        }
 
-Testing / 確認に使ったコマンド
+        /**
+         * Maze: 迷路の生成と管理
+         */
+        class Maze {
+            constructor(size) {
+                this.size = size;
+                this.generate();
+            }
 
-✅ pwd && rg --files -g 'AGENTS.md' -g 'README*' -g 'package.json' -g '*game*' -g '*upload*' | head -100
+            generate() {
+                const grid = Array.from({ length: this.size * 2 + 1 }, () => Array(this.size * 2 + 1).fill(1));
+                const visited = Array.from({ length: this.size }, () => Array(this.size).fill(false));
+                const stack = [];
+                
+                let cx = 0, cy = 0;
+                visited[cy][cx] = true;
+                grid[cy * 2 + 1][cx * 2 + 1] = 0;
 
-✅ find .. -name AGENTS.md -print
+                const dirs = [
+                    { dx: 0, dy: -1, wx: 0, wy: -1 },
+                    { dx: 1, dy: 0, wx: 1, wy: 0 },
+                    { dx: 0, dy: 1, wx: 0, wy: 1 },
+                    { dx: -1, dy: 0, wx: -1, wy: 0 }
+                ];
 
-✅ sed -n '1,220p' README.md
+                while (true) {
+                    const neighbors = dirs.filter(d => {
+                        const nx = cx + d.dx;
+                        const ny = cy + d.dy;
+                        return nx >= 0 && nx < this.size && ny >= 0 && ny < this.size && !visited[ny][nx];
+                    });
 
-✅ sed -n '1,220p' games.json
+                    if (neighbors.length > 0) {
+                        const d = neighbors[Math.floor(Math.random() * neighbors.length)];
+                        grid[cy * 2 + 1 + d.wy][cx * 2 + 1 + d.wx] = 0;
+                        grid[(cy + d.dy) * 2 + 1][(cx + d.dx) * 2 + 1] = 0;
+                        visited[cy + d.dy][cx + d.dx] = true;
+                        stack.push({ x: cx, y: cy });
+                        cx += d.dx;
+                        cy += d.dy;
+                    } else if (stack.length > 0) {
+                        const p = stack.pop();
+                        cx = p.x; cy = p.y;
+                    } else break;
+                }
+                this.grid = grid;
+            }
+        }
 
-✅ sed -n '1,180p' src/config/gameConfig.ts
+        /**
+         * Ball: ボールの物理挙動
+         */
+        class Ball {
+            constructor(startX, startY, radius) {
+                this.x = startX;
+                this.y = startY;
+                this.vx = 0;
+                this.vy = 0;
+                this.radius = radius;
+                this.friction = 0.95;
+                this.accel = 0.6;
+            }
 
-✅ find . -maxdepth 3 -type f | sort | sed -n '1,160p'
+            update(input, maze, cellSize) {
+                this.vx += input.x * this.accel;
+                this.vy += input.y * this.accel;
+                this.vx *= this.friction;
+                this.vy *= this.friction;
 
-✅ nl -ba games.json | sed -n '1,80p'
+                let nextX = this.x + this.vx;
+                let nextY = this.y + this.vy;
 
-✅ nl -ba .github/workflows/deploy.yml | sed -n '1,200p'
+                if (this.checkCollision(nextX, this.y, maze, cellSize)) {
+                    this.vx = 0;
+                    nextX = this.x;
+                }
+                if (this.checkCollision(this.x, nextY, maze, cellSize)) {
+                    this.vy = 0;
+                    nextY = this.y;
+                }
 
-✅ nl -ba index.html | sed -n '1,180p'
+                this.x = nextX;
+                this.y = nextY;
+            }
 
-✅ nl -ba games/medal-block-slot/index.html | sed -n '1,80p'
+            checkCollision(x, y, maze, cellSize) {
+                const margin = this.radius * 0.8;
+                const points = [
+                    { x: x - margin, y: y - margin },
+                    { x: x + margin, y: y - margin },
+                    { x: x - margin, y: y + margin },
+                    { x: x + margin, y: y + margin }
+                ];
+                for (let p of points) {
+                    const gx = Math.floor(p.x / cellSize);
+                    const gy = Math.floor(p.y / cellSize);
+                    if (gx < 0 || gx >= maze.grid[0].length || gy < 0 || gy >= maze.grid.length) return true;
+                    if (maze.grid[gy][gx] === 1) return true;
+                }
+                return false;
+            }
+        }
 
-✅ nl -ba assets/landing/main.js | sed -n '1,220p' && git status --short
+        /**
+         * MissionManager: ミッションの管理と達成度表示
+         */
+        class MissionManager {
+            constructor(game) {
+                this.game = game;
+                this.currentMission = null;
+                this.timer = 0;
+                this.accumulatedTime = 0; // 静止・保持ミッションの時間計測用
+                this.initialDistance = 0; // 移動ミッション用
 
-ゲームファイルを送れないんですけど
-コピーする
-大丈夫です。ゲームファイルを直接送れない場合でも、アップロード方法はいくつかあります。
+                this.missionTypes = [
+                    { 
+                        id: 'SHAKE', 
+                        text: '5秒間端末を振る！(たくさん振って！)', 
+                        duration: 7, 
+                        getProgress: () => Math.min(100, Math.floor((this.game.input.shakeCount / 20) * 100)),
+                        check: () => this.game.input.shakeCount >= 20 
+                    },
+                    { 
+                        id: 'STILL', 
+                        text: '5秒間、ボールを動かさないで！', 
+                        duration: 7, 
+                        getProgress: () => Math.min(100, Math.floor((this.accumulatedTime / 5) * 100)),
+                        check: (dt) => {
+                            const isStill = Math.abs(this.game.ball.vx) < 0.15 && Math.abs(this.game.ball.vy) < 0.15;
+                            if (isStill) this.accumulatedTime += dt;
+                            else this.accumulatedTime = Math.max(0, this.accumulatedTime - dt * 0.5); // 動くと少し減る
+                            return this.accumulatedTime >= 5;
+                        }
+                    },
+                    { 
+                        id: 'TILT_LEFT', 
+                        text: '3秒間、左へ傾けてキープして！', 
+                        duration: 6, 
+                        getProgress: () => Math.min(100, Math.floor((this.accumulatedTime / 3) * 100)),
+                        check: (dt) => {
+                            const isLeft = this.game.input.tiltX < -15 || this.game.input.keys['ArrowLeft'] || this.game.input.keys['KeyA'];
+                            if (isLeft) this.accumulatedTime += dt;
+                            else this.accumulatedTime = Math.max(0, this.accumulatedTime - dt);
+                            return this.accumulatedTime >= 3;
+                        }
+                    },
+                    { 
+                        id: 'TILT_RIGHT', 
+                        text: '3秒間、右へ傾けてキープして！', 
+                        duration: 6, 
+                        getProgress: () => Math.min(100, Math.floor((this.accumulatedTime / 3) * 100)),
+                        check: (dt) => {
+                            const isRight = this.game.input.tiltX > 15 || this.game.input.keys['ArrowRight'] || this.game.input.keys['KeyD'];
+                            if (isRight) this.accumulatedTime += dt;
+                            else this.accumulatedTime = Math.max(0, this.accumulatedTime - dt);
+                            return this.accumulatedTime >= 3;
+                        }
+                    },
+                    { 
+                        id: 'TILT_UP', 
+                        text: '3秒間、上へ傾けてキープして！', 
+                        duration: 6, 
+                        getProgress: () => Math.min(100, Math.floor((this.accumulatedTime / 3) * 100)),
+                        check: (dt) => {
+                            const isUp = this.game.input.tiltY < -15 || this.game.input.keys['ArrowUp'] || this.game.input.keys['KeyW'];
+                            if (isUp) this.accumulatedTime += dt;
+                            else this.accumulatedTime = Math.max(0, this.accumulatedTime - dt);
+                            return this.accumulatedTime >= 3;
+                        }
+                    },
+                    { 
+                        id: 'TILT_DOWN', 
+                        text: '3秒間、下へ傾けてキープして！', 
+                        duration: 6, 
+                        getProgress: () => Math.min(100, Math.floor((this.accumulatedTime / 3) * 100)),
+                        check: (dt) => {
+                            const isDown = this.game.input.tiltY > 15 || this.game.input.keys['ArrowDown'] || this.game.input.keys['KeyS'];
+                            if (isDown) this.accumulatedTime += dt;
+                            else this.accumulatedTime = Math.max(0, this.accumulatedTime - dt);
+                            return this.accumulatedTime >= 3;
+                        }
+                    }
+                ];
+            }
 
-方法1: GitHubに直接アップロードする
-一番わかりやすい方法です。
+            startRandomMission() {
+                if (this.currentMission) return;
+                const type = this.missionTypes[Math.floor(Math.random() * this.missionTypes.length)];
+                this.currentMission = { ...type };
+                this.timer = this.currentMission.duration;
+                this.accumulatedTime = 0;
 
-GitHubでこのリポジトリを開く
+                this.game.ui.showMission(this.currentMission.text);
+                this.game.input.resetShake();
+            }
 
-games フォルダを開く
+            update(dt) {
+                if (!this.currentMission) return;
+                this.timer -= dt;
+                this.game.ui.updateMissionTimer(Math.ceil(this.timer));
 
-Add file → Create new file または Upload files を選ぶ
+                // 進行度取得
+                const progress = this.currentMission.getProgress();
+                this.game.ui.updateMissionProgress(progress);
 
-新しいゲーム用フォルダを作る
-例: games/my-new-game/index.html
+                if (this.currentMission.check(dt)) {
+                    this.complete();
+                } else if (this.timer <= 0) {
+                    this.fail();
+                }
+            }
 
-必要な html / css / js / 画像 を追加する
+            complete() {
+                this.game.sound.playSuccess();
+                this.game.ui.hideMission();
+                this.currentMission = null;
+            }
 
-games.json にゲーム情報を追加する
+            fail() {
+                this.game.sound.playFail();
+                this.game.ui.hideMission();
+                this.currentMission = null;
+                this.game.resetPlayer();
+            }
+        }
 
-このサイトでは、ゲーム一覧は games.json を元に表示されています。公開済みゲームは path に games/medal-block-slot/ のようなゲームフォルダのパスを指定しています。 
+        /**
+         * Game: 全体制御
+         */
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.sound = new SoundManager();
+                this.input = new InputManager();
+                this.state = 'TITLE';
+                this.mazeSize = 10;
+                this.maze = null;
+                this.ball = null;
+                this.missionManager = new MissionManager(this);
+                this.startTime = 0;
+                this.elapsedTime = 0;
+                this.initUI();
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                this.lastTime = 0;
+                requestAnimationFrame((t) => this.loop(t));
+            }
 
-方法2: ファイルを送らず、コードをチャットに貼る
-ファイルそのものを送れなくても、以下のように中身を貼ってもらえれば、こちらでファイル化できます。
+            initUI() {
+                this.ui = {
+                    screens: {
+                        title: document.getElementById('screen-title'),
+                        difficulty: document.getElementById('screen-difficulty'),
+                        mission: document.getElementById('mission-alert'),
+                        result: document.getElementById('screen-result'),
+                    },
+                    missionText: document.getElementById('mission-text'),
+                    missionTimer: document.getElementById('mission-timer'),
+                    missionProgressBar: document.getElementById('mission-progress-bar'),
+                    missionProgressPercent: document.getElementById('mission-progress-percent'),
+                    resultTime: document.getElementById('result-time'),
+                    gameplayUI: document.getElementById('gameplay-ui'),
+                    gameplayTimer: document.getElementById('gameplay-timer'),
+                    showMission: (text) => {
+                        this.ui.screens.mission.classList.remove('hidden');
+                        this.ui.missionText.innerText = text;
+                        this.ui.updateMissionProgress(0);
+                    },
+                    updateMissionTimer: (val) => {
+                        this.ui.missionTimer.innerText = `${val}秒`;
+                    },
+                    updateMissionProgress: (percent) => {
+                        this.ui.missionProgressBar.style.width = `${percent}%`;
+                        this.ui.missionProgressPercent.innerText = `${percent}%`;
+                    },
+                    hideMission: () => {
+                        this.ui.screens.mission.classList.add('hidden');
+                    },
+                    showScreen: (name) => {
+                        Object.values(this.ui.screens).forEach(s => s.classList.add('hidden'));
+                        if (name !== 'none') this.ui.screens[name].classList.remove('hidden');
+                    }
+                };
 
-例：
+                document.getElementById('btn-start').onclick = () => {
+                    this.sound.playButton();
+                    this.requestOrientationPermission().then(() => {
+                        this.ui.showScreen('difficulty');
+                        this.state = 'DIFFICULTY';
+                    });
+                };
+                document.querySelectorAll('[data-size]').forEach(btn => {
+                    btn.onclick = () => {
+                        this.sound.playButton();
+                        this.mazeSize = parseInt(btn.dataset.size);
+                        this.startGame();
+                    };
+                });
+                document.getElementById('btn-back-title').onclick = () => {
+                    this.sound.playButton();
+                    this.sound.stopBGM();
+                    this.ui.showScreen('title');
+                    this.state = 'TITLE';
+                };
+                document.getElementById('btn-next-stage').onclick = () => {
+                    this.sound.playButton();
+                    this.sound.stopBGM();
+                    this.ui.showScreen('difficulty');
+                    this.state = 'DIFFICULTY';
+                };
+                document.getElementById('btn-result-title').onclick = () => {
+                    this.sound.playButton();
+                    this.sound.stopBGM();
+                    this.ui.showScreen('title');
+                    this.state = 'TITLE';
+                };
+            }
 
-ファイル名: games/my-new-game/index.html
+            async requestOrientationPermission() {
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    try {
+                        const permission = await DeviceOrientationEvent.requestPermission();
+                        return permission === 'granted';
+                    } catch (e) { return false; }
+                }
+                return true;
+            }
 
-<!doctype html>
-<html>
-  ...
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                if (this.maze) {
+                    this.cellSize = Math.min(this.canvas.width * 0.9, this.canvas.height * 0.8) / (this.mazeSize * 2 + 1);
+                }
+            }
+
+            startGame() {
+                this.maze = new Maze(this.mazeSize);
+                // 画面を広めにとる
+                this.cellSize = Math.min(this.canvas.width * 0.9, this.canvas.height * 0.8) / (this.mazeSize * 2 + 1);
+                
+                // スタート地点は (1, 1) セルの中心。セルサイズに基づく座標
+                this.ball = new Ball(this.cellSize * 1.5, this.cellSize * 1.5, this.cellSize * 0.35);
+                this.startTime = Date.now();
+                this.state = 'PLAYING';
+                this.ui.showScreen('none');
+                this.ui.gameplayUI.classList.remove('hidden');
+                this.sound.startBGM();
+            }
+
+            resetPlayer() {
+                this.ball.x = this.cellSize * 1.5;
+                this.ball.y = this.cellSize * 1.5;
+                this.ball.vx = 0;
+                this.ball.vy = 0;
+            }
+
+            loop(timestamp) {
+                const dt = (timestamp - this.lastTime) / 1000;
+                this.lastTime = timestamp;
+                if (this.state === 'PLAYING') {
+                    this.update(dt);
+                    this.draw();
+                }
+                requestAnimationFrame((t) => this.loop(t));
+            }
+
+            update(dt) {
+                this.ball.update(this.input.getMovement(), this.maze, this.cellSize);
+                this.elapsedTime = (Date.now() - this.startTime) / 1000;
+
+                // タイム表示のリアルタイム更新
+                const mins = Math.floor(this.elapsedTime / 60);
+                const secs = Math.floor(this.elapsedTime % 60);
+                this.ui.gameplayTimer.innerText = `タイム: ${mins}:${secs.toString().padStart(2, '0')}`;
+
+                // ミッションの定期抽選 (プレイ中かつ未発生時)
+                if (!this.missionManager.currentMission && Math.random() < 0.003) {
+                    this.missionManager.startRandomMission();
+                }
+                this.missionManager.update(dt);
+
+                // ゴール判定の修正: ゴールセルは (size * 2 - 1, size * 2 - 1) 通路内の一番奥
+                const goalGridX = this.mazeSize * 2 - 1;
+                const goalGridY = this.mazeSize * 2 - 1;
+                const goalX = (goalGridX + 0.5) * this.cellSize;
+                const goalY = (goalGridY + 0.5) * this.cellSize;
+
+                if (Math.hypot(this.ball.x - goalX, this.ball.y - goalY) < this.cellSize * 0.6) {
+                    this.win();
+                }
+            }
+
+            win() {
+                this.state = 'RESULT';
+                this.sound.stopBGM();
+                this.sound.playClear();
+                this.ui.gameplayUI.classList.add('hidden');
+                const mins = Math.floor(this.elapsedTime / 60);
+                const secs = Math.floor(this.elapsedTime % 60);
+                this.ui.resultTime.innerText = `タイム: ${mins}:${secs.toString().padStart(2, '0')}`;
+                this.ui.showScreen('result');
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 迷路のセンタリングオフセット
+                const offsetX = (this.canvas.width - this.maze.grid[0].length * this.cellSize) / 2;
+                const offsetY = (this.canvas.height - this.maze.grid.length * this.cellSize) / 2;
+
+                this.ctx.save();
+                this.ctx.translate(offsetX, offsetY);
+
+                // 1. 迷路の地面（白色で高齢者にも見やすく）
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.fillRect(0, 0, this.maze.grid[0].length * this.cellSize, this.maze.grid.length * this.cellSize);
+
+                // 2. 迷路の太い壁を描画
+                this.ctx.fillStyle = '#1e293b'; // Slate 800 (濃い色でコントラストを最大に)
+                for (let y = 0; y < this.maze.grid.length; y++) {
+                    for (let x = 0; x < this.maze.grid[0].length; x++) {
+                        if (this.maze.grid[y][x] === 1) {
+                            this.ctx.fillRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
+                        }
+                    }
+                }
+
+                // 3. ゴール（迷路の最後の通路 (size * 2 - 1) に完全に配置する）
+                const goalGridX = this.mazeSize * 2 - 1;
+                const goalGridY = this.mazeSize * 2 - 1;
+                const gx = goalGridX * this.cellSize;
+                const gy = goalGridY * this.cellSize;
+
+                this.ctx.fillStyle = '#10b981'; // Green-500
+                this.ctx.fillRect(gx, gy, this.cellSize, this.cellSize);
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.font = 'bold 16px sans-serif';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText('GOAL', gx + this.cellSize / 2, gy + this.cellSize / 2);
+
+                // 4. プレイヤー（ボール）の描画
+                this.ctx.beginPath();
+                this.ctx.arc(this.ball.x, this.ball.y, this.ball.radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#3b82f6'; // 明るい青
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#1d4ed8'; // 濃い青
+                this.ctx.lineWidth = 4;
+                this.ctx.stroke();
+
+                this.ctx.restore();
+            }
+        }
+
+        window.onload = () => { new Game(); };
+    </script>
+</body>
 </html>
-ファイル名: games/my-new-game/main.js
-
-console.log("game start");
-ファイル名: games/my-new-game/style.css
-
-body {
-  margin: 0;
-}
-この方法なら、添付ファイルが使えなくても作業できます。
-
-方法3: ゲームの内容だけ説明してもらう
-まだゲームファイルがない場合は、ゲームの仕様だけ教えてもらえれば、こちらで実装できます。
-
-例えば、以下のように教えてください。
-
-ゲーム名: たし算キャッチ
-内容: 落ちてくる数字をクリックして、指定された合計になるようにするゲーム
-対象: 高齢者向け
-操作: マウスまたはタッチ
-難易度: 最初は簡単、だんだん速くなる
-見た目: 大きな文字、明るい色
-このリポジトリのトップページは、games.json を読み込んでゲームカードを作る仕組みです。 
-公開中のゲームとして表示するには、status を "released" にして、path を設定する必要があります。 
-
-方法4: まず「準備中」として登録する
-ゲーム本体がまだなくても、トップページに「近日公開」として載せることはできます。
-
-現在も next-game が status: "coming-soon"、path: null で準備中ゲームとして登録されています。 
-
-例：
-
-{
-  "id": "my-new-game",
-  "title": "新しいゲーム",
-  "description": "現在制作中のゲームです。",
-  "thumbnail": null,
-  "path": null,
-  "status": "coming-soon",
-  "tags": ["近日公開"],
-  "addedDate": "2026-07-03"
-}
-おすすめ
-ゲームファイルを送れないなら、まずはこのどちらかがおすすめです。
-
-A. すでにコードがある場合
-コードの中身をチャットに貼ってください。
-
-index.html の中身:
-...
-
-main.js の中身:
-...
-
-style.css の中身:
-...
-B. まだコードがない場合
-ゲームの内容を日本語で説明してください。
-こちらでゲームを作って、games.json への登録までできます。
-
-確認に使ったコマンド
-
-✅ pwd && rg --files -g 'AGENTS.md' -g 'README*' -g 'package.json' -g '*game*' -g '*upload*' | head -100
-
-✅ sed -n '1,220p' games.json
-
-✅ nl -ba games.json | sed -n '1,80p'
-
-✅ nl -ba assets/landing/main.js | sed -n '1,220p'
-
-ゲームファイルをculture-lab/gemes/calculate-curlingに入れました
-コピーする
-Summary
-
-games.json に「計算カーリング」を公開済みゲームとして登録し、トップページから games/calculate-curling/ へ移動できるようにしました。 
-
-games/calculate-curling/index.html の読み込み先を /src/main.tsx から ./main.tsx に直し、calculate-curling フォルダ内のゲームとしてビルドできるようにしました。 
-
-lucide-react がルート環境に無くてもビルドできるよう、ゲーム内アイコンをローカルの絵文字アイコンコンポーネントに置き換えました。 
-
-calculate-curling 側の依存関係から lucide-react を外し、既存依存だけで動くようにしました。 
-
-calculate-curling の TypeScript 設定を、src/ ではなく現在のフォルダ直下の *.ts / *.tsx を対象にするよう修正しました。 
-
-ルートのビルド時に games/calculate-curling もビルドし、成果物を dist/games/calculate-curling へコピーするようにしました。 
-
-変更を f53dd20 Publish calculate curling game としてコミットし、PRも作成しました。
-
-Testing
-
-✅ npm run build（games/calculate-curling で実行）
-
-✅ npm run build（リポジトリルートで実行）
-
-✅ git diff --check
-
-⚠️ npm install lucide-react@^1.21.0（npm registry へのアクセスが 403 Forbidden になったため、外部依存を追加せずローカルアイコンへ置き換え）
-
-⚠️ npm install --package-lock-only --ignore-scripts（npm registry へのアクセスが 403 Forbidden になったため、lockfile は手動で不要依存を削除）
-
-
-ファイル (7)
-
-games.json
-games.json
-+9
--9
-
-App.tsx
-games/calculate-curling/App.tsx
-+18
--4
-
-index.html
-games/calculate-curling/index.html
-+1
--1
-
-package-lock.json
-games/calculate-curling/package-lock.json
-+0
--10
-
-package.json
-games/calculate-curling/package.json
-+0
--1
-
-tsconfig.json
-games/calculate-curling/tsconfig.json
-+2
--2
-
-vite.config.ts
-vite.config.ts
-+10
--1
-
-
-
-差分
-ログ
-
-games.json
-games.json
-+9
--9
-
-[
-  {
-    "id": "medal-block-slot",
-    "title": "メダルブロック・スロット",
-    "description": "スロットを止めてボールを発射し、ブロックを崩してメダルを集めるゲームです。",
-    "thumbnail": null,
-    "path": "games/medal-block-slot/",
-    "status": "released",
-    "tags": ["スロット", "ブロック崩し"],
-    "addedDate": "2026-07-03"
-  },
-  {
-  "id": "calculate-curling",
-  "title": "計算カーリング",
-  "description": "四則演算カーリングを飛ばし、特定の数値に近づけるゲームです。",
-  "thumbnail": null,
-  "path": "games/calculate-curling/",
-  "status": "released",
-  "tags": ["カーリング", "パズル"],
-  "addedDate": "2026-07-03"
-}
-    "id": "calculate-curling",
-    "title": "計算カーリング",
-    "description": "ストーンを滑らせて数字を集め、目標値に近づける計算脳トレゲームです。",
-    "thumbnail": null,
-    "path": "games/calculate-curling/",
-    "status": "released",
-    "tags": ["計算", "カーリング", "脳トレ"],
-    "addedDate": "2026-07-03"
-  },
-  {
-    "id": "next-game",
-    "title": "次回作（準備中）",
-    "description": "今後追加予定のゲームです。公開までしばらくお待ちください。",
-    "thumbnail": null,
-    "path": null,
-    "status": "coming-soon",
-    "tags": ["近日公開"],
-    "addedDate": "2026-07-03"
-  }
-]
-games/calculate-curling/App.tsx
-games/calculate-curling/App.tsx
-+18
--4
-
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Play, RotateCcw, Volume2, VolumeX, User, Cpu, Award, 
-  Brain, Sparkles, Target, Zap
-} from 'lucide-react';
-
-type IconProps = { className?: string };
-
-function Icon({ className = '', label }: IconProps & { label: string }) {
-  return <span className={`inline-flex items-center justify-center ${className}`} aria-hidden="true">{label}</span>;
-}
-
-const Play = (props: IconProps) => <Icon {...props} label="▶" />;
-const RotateCcw = (props: IconProps) => <Icon {...props} label="↻" />;
-const Volume2 = (props: IconProps) => <Icon {...props} label="🔊" />;
-const VolumeX = (props: IconProps) => <Icon {...props} label="🔇" />;
-const User = (props: IconProps) => <Icon {...props} label="👤" />;
-const Cpu = (props: IconProps) => <Icon {...props} label="🤖" />;
-const Award = (props: IconProps) => <Icon {...props} label="🏆" />;
-const Brain = (props: IconProps) => <Icon {...props} label="🧠" />;
-const Sparkles = (props: IconProps) => <Icon {...props} label="✨" />;
-const Target = (props: IconProps) => <Icon {...props} label="🎯" />;
-const Zap = (props: IconProps) => <Icon {...props} label="⚡" />;
-
-// ==========================================
-// A. 型定義 & 物理・ゲームパラメータ
-// ==========================================
-type GameMode = 'cpu' | 'local';
-type CpuDifficulty = 'easy' | 'normal' | 'hard';
-type StoneStatus = 'idle' | 'aiming' | 'sliding' | 'stopped'; 
-
-const BOARD_WIDTH = 500;
-const BOARD_HEIGHT = 600;
-const HEADER_HEIGHT = 80;
-const GRID_ROWS = 4;
-const GRID_COLS = 5;
-const CELL_SIZE = 100; 
-const STONE_RADIUS = 18;
-const FRICTION = 0.985;
-const BOUNCE = 0.8;
-const MAX_LAUNCH_VELOCITY = 17; 
-
-interface Token {
-  type: 'num' | 'op';
-  val: string; 
-}
-
-interface PlayedStone {
-games/calculate-curling/index.html
-games/calculate-curling/index.html
-+1
--1
-
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>計算カーリング - Calculation Curling | 認知症予防脳トレゲーム</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    <script type="module" src="./main.tsx"></script>
-  </body>
-</html>
-games/calculate-curling/package-lock.json
-games/calculate-curling/package-lock.json
-+0
--10
-
-{
-  "name": "react-vite-tailwind",
-  "version": "0.0.0",
-  "lockfileVersion": 3,
-  "requires": true,
-  "packages": {
-    "": {
-      "name": "react-vite-tailwind",
-      "version": "0.0.0",
-      "dependencies": {
-        "clsx": "2.1.1",
-        "lucide-react": "^1.21.0",
-        "react": "19.2.6",
-        "react-dom": "19.2.6",
-        "tailwind-merge": "3.4.0"
-      },
-      "devDependencies": {
-        "@tailwindcss/vite": "4.1.17",
-        "@types/node": "22.19.17",
-        "@types/react": "19.2.7",
-        "@types/react-dom": "19.2.3",
-        "@vitejs/plugin-react": "5.1.1",
-        "tailwindcss": "4.1.17",
-        "typescript": "5.9.3",
-        "vite": "7.3.2",
-        "vite-plugin-singlefile": "2.3.0"
-      }
-    },
-    "node_modules/@babel/code-frame": {
-      "version": "7.29.7",
-      "resolved": "https://registry.npmjs.org/@babel/code-frame/-/code-frame-7.29.7.tgz",
-      "integrity": "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==",
-      "dev": true,
-      "license": "MIT",
-      "dependencies": {
-        "@babel/helper-validator-identifier": "^7.29.7",
-        "js-tokens": "^4.0.0",
-@@ -2102,59 +2101,50 @@
-      ],
-      "dev": true,
-      "license": "MPL-2.0",
-      "optional": true,
-      "os": [
-        "win32"
-      ],
-      "engines": {
-        "node": ">= 12.0.0"
-      },
-      "funding": {
-        "type": "opencollective",
-        "url": "https://opencollective.com/parcel"
-      }
-    },
-    "node_modules/lru-cache": {
-      "version": "5.1.1",
-      "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-5.1.1.tgz",
-      "integrity": "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==",
-      "dev": true,
-      "license": "ISC",
-      "dependencies": {
-        "yallist": "^3.0.2"
-      }
-    },
-    "node_modules/lucide-react": {
-      "version": "1.21.0",
-      "resolved": "https://registry.npmjs.org/lucide-react/-/lucide-react-1.21.0.tgz",
-      "integrity": "sha512-reEZMXq8Qdd5jg5XYkQ5TR1fB/GiQ7ih4vcrthYDtgjSDwh0i6/YLiGjsWsIwgN49gpAnd4J2elSNzncMEEUUQ==",
-      "license": "ISC",
-      "peerDependencies": {
-        "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0"
-      }
-    },
-    "node_modules/magic-string": {
-      "version": "0.30.21",
-      "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.30.21.tgz",
-      "integrity": "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==",
-      "dev": true,
-      "license": "MIT",
-      "dependencies": {
-        "@jridgewell/sourcemap-codec": "^1.5.5"
-      }
-    },
-    "node_modules/micromatch": {
-      "version": "4.0.8",
-      "resolved": "https://registry.npmjs.org/micromatch/-/micromatch-4.0.8.tgz",
-      "integrity": "sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==",
-      "dev": true,
-      "license": "MIT",
-      "dependencies": {
-        "braces": "^3.0.3",
-        "picomatch": "^2.3.1"
-      },
-      "engines": {
-        "node": ">=8.6"
-      }
-    },
-    "node_modules/micromatch/node_modules/picomatch": {
-games/calculate-curling/package.json
-games/calculate-curling/package.json
-+0
--1
-
-{
-  "name": "react-vite-tailwind",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "clsx": "2.1.1",
-    "lucide-react": "^1.21.0",
-    "react": "19.2.6",
-    "react-dom": "19.2.6",
-    "tailwind-merge": "3.4.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "4.1.17",
-    "@types/node": "22.19.17",
-    "@types/react": "19.2.7",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "5.1.1",
-    "tailwindcss": "4.1.17",
-    "typescript": "5.9.3",
-    "vite": "7.3.2",
-    "vite-plugin-singlefile": "2.3.0"
-  }
-}
-games/calculate-curling/tsconfig.json
-games/calculate-curling/tsconfig.json
-+2
--2
-
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-    "types": ["node"],
-
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-
-    /* Path mapping */
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-      "@/*": ["./*"]
-    },
-
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
-  },
-  "include": ["src", "vite.config.ts"]
-  "include": ["./*.ts", "./*.tsx", "vite.config.ts"]
-}
-vite.config.ts
-vite.config.ts
-+10
--1
-
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { copyFileSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
-import { execFileSync } from "child_process";
-import path from "path";
-import { fileURLToPath } from "url";
-import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react";
-import { defineConfig, type Plugin } from "vite";
-import { viteSingleFile } from "vite-plugin-singlefile";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-function copyLandingFiles(): Plugin {
-  return {
-    name: "copy-landing-files",
-    closeBundle() {
-      const distDir = path.resolve(__dirname, "dist");
-      const landingAssetsDir = path.resolve(distDir, "assets/landing");
-
-      mkdirSync(landingAssetsDir, { recursive: true });
-      copyFileSync(path.resolve(__dirname, "games.json"), path.resolve(distDir, "games.json"));
-      copyFileSync(path.resolve(__dirname, "assets/landing/style.css"), path.resolve(landingAssetsDir, "style.css"));
-      copyFileSync(path.resolve(__dirname, "assets/landing/main.js"), path.resolve(landingAssetsDir, "main.js"));
-
-      const landingHtml = readFileSync(path.resolve(__dirname, "index.html"), "utf-8");
-      writeFileSync(path.resolve(distDir, "index.html"), landingHtml);
-
-      const calculateCurlingDir = path.resolve(__dirname, "games/calculate-curling");
-      execFileSync("npm", ["run", "build"], { cwd: calculateCurlingDir, stdio: "inherit" });
-
-      const calculateCurlingDistDir = path.resolve(calculateCurlingDir, "dist");
-      const calculateCurlingOutputDir = path.resolve(distDir, "games/calculate-curling");
-      rmSync(calculateCurlingOutputDir, { recursive: true, force: true });
-      cpSync(calculateCurlingDistDir, calculateCurlingOutputDir, { recursive: true });
-    },
-  };
-}
-
-// https://vite.dev/config/
-export default defineConfig({
-  base: "/culture-lab/",
-
-  plugins: [
-    react(),
-    tailwindcss(),
-    viteSingleFile(),
-    copyLandingFiles(),
-  ],
-
-  build: {
-    rollupOptions: {
-      input: path.resolve(__dirname, "games/medal-block-slot/index.html"),
-    },
-  },
-
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "src"),
-    },
