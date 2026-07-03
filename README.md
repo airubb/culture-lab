@@ -7,7 +7,6 @@
 
 [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-222222?style=for-the-badge&logo=githubpages&logoColor=white)](https://airubb.github.io/culture-lab/)
 
-![Pages Deploy](https://github.com/airubb/culture-lab/actions/workflows/pages-build-deployment/badge.svg)
 ![CI](https://github.com/airubb/culture-lab/actions/workflows/deploy.yml/badge.svg)
 
 ## 目次
