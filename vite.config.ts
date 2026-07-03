@@ -1,4 +1,5 @@
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { copyFileSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { execFileSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 import tailwindcss from "@tailwindcss/vite";
@@ -23,6 +24,14 @@ function copyLandingFiles(): Plugin {
 
       const landingHtml = readFileSync(path.resolve(__dirname, "index.html"), "utf-8");
       writeFileSync(path.resolve(distDir, "index.html"), landingHtml);
+
+      const calculateCurlingDir = path.resolve(__dirname, "games/calculate-curling");
+      execFileSync("npm", ["run", "build"], { cwd: calculateCurlingDir, stdio: "inherit" });
+
+      const calculateCurlingDistDir = path.resolve(calculateCurlingDir, "dist");
+      const calculateCurlingOutputDir = path.resolve(distDir, "games/calculate-curling");
+      rmSync(calculateCurlingOutputDir, { recursive: true, force: true });
+      cpSync(calculateCurlingDistDir, calculateCurlingOutputDir, { recursive: true });
     },
   };
 }

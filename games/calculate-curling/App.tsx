@@ -1,8 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Play, RotateCcw, Volume2, VolumeX, User, Cpu, Award, 
-  Brain, Sparkles, Target, Zap
-} from 'lucide-react';
+
+type IconProps = { className?: string };
+
+function Icon({ className = '', label }: IconProps & { label: string }) {
+  return <span className={`inline-flex items-center justify-center ${className}`} aria-hidden="true">{label}</span>;
+}
+
+const Play = (props: IconProps) => <Icon {...props} label="▶" />;
+const RotateCcw = (props: IconProps) => <Icon {...props} label="↻" />;
+const Volume2 = (props: IconProps) => <Icon {...props} label="🔊" />;
+const VolumeX = (props: IconProps) => <Icon {...props} label="🔇" />;
+const User = (props: IconProps) => <Icon {...props} label="👤" />;
+const Cpu = (props: IconProps) => <Icon {...props} label="🤖" />;
+const Award = (props: IconProps) => <Icon {...props} label="🏆" />;
+const Brain = (props: IconProps) => <Icon {...props} label="🧠" />;
+const Sparkles = (props: IconProps) => <Icon {...props} label="✨" />;
+const Target = (props: IconProps) => <Icon {...props} label="🎯" />;
+const Zap = (props: IconProps) => <Icon {...props} label="⚡" />;
 
 // ==========================================
 // A. 型定義 & 物理・ゲームパラメータ
