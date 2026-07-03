@@ -1,3 +1,10 @@
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
+[![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-222222?style=for-the-badge&logo=githubpages&logoColor=white)](https://airubb.github.io/culture-lab/)
+
+![CI](https://github.com/airubb/culture-lab/actions/workflows/deploy.yml/badge.svg)
+
 # スロット崩し (Slot Breaker)
 
 [公開リンク](https://airubb.github.io/culture-lab/)
