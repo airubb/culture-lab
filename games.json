@@ -20,11 +20,11 @@
     "addedDate": "2026-07-03"
   },
     {
-    "id": "Maze Mission",
+    "id": "Maze-Mission",
     "title": "転がし迷路",
     "description": "画面を傾け、ボールを転がしゴールを目指します。途中に出てくるミッションも達成しよう",
     "thumbnail": null,
-    "path": "games/Maze Mission/",
+    "path": "games/Maze-Mission/",
     "status": "released",
     "tags": ["センサー", "ボール", "迷路"],
     "addedDate": "2026-07-03"
