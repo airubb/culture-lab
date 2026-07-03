@@ -18,7 +18,7 @@
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["games/medal-block-slot/src/*"]
     },
 
     /* Linting */
@@ -27,5 +27,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["games/medal-block-slot/src", "vite.config.ts"]
 }

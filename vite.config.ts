@@ -46,7 +46,7 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "src"),
+      "@": path.resolve(__dirname, "games/medal-block-slot/src"),
     },
   },
 });
