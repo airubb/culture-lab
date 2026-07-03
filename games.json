@@ -10,15 +10,15 @@
     "addedDate": "2026-07-03"
   },
   {
-  "id": "calculate-curling",
-  "title": "計算カーリング",
-  "description": "四則演算カーリングを飛ばし、特定の数値に近づけるゲームです。",
-  "thumbnail": null,
-  "path": "games/calculate-curling/",
-  "status": "released",
-  "tags": ["カーリング", "パズル"],
-  "addedDate": "2026-07-03"
-}
+    "id": "calculate-curling",
+    "title": "計算カーリング",
+    "description": "ストーンを滑らせて数字を集め、目標値に近づける計算脳トレゲームです。",
+    "thumbnail": null,
+    "path": "games/calculate-curling/",
+    "status": "released",
+    "tags": ["計算", "カーリング", "脳トレ"],
+    "addedDate": "2026-07-03"
+  },
   {
     "id": "next-game",
     "title": "次回作（準備中）",
