@@ -62,6 +62,7 @@ project-root/
 │       └── style.css
 ├── .gitignore
 ├── index.html
+├── game.json
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
