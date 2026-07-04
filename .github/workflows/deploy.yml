@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - main
-      - make-landing-page
+      - feature/make-landing-page
+      - codex/move-src-folder-to-medal-block-slot
 
 permissions:
   contents: read
