@@ -5,7 +5,6 @@ on:
     branches:
       - main
       - feature/make-landing-page
-      - codex/move-src-folder-to-medal-block-slot
 
 permissions:
   contents: read
