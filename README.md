@@ -60,14 +60,20 @@ project-root/
 │       │   └── ...
 │       └── index.html
 ├── assets/
-│   └── landing/
-│       ├── main.js
-│       └── style.css
+│   ├── landing/
+│   │   ├── main.js
+│   │   ├── style.css
+│   │   ├── thumbnail 1
+│   │   └── ...
+│   └── game1/
+│       ├── assets 1
+│       └── assets 2
 ├── .gitignore
-├── index.html
-├── game.json
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
+├── game.json
+├── index.html
+├── LICENSE
 └── README.md
 ```
