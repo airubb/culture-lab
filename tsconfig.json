@@ -16,9 +16,8 @@
     "jsx": "react-jsx",
 
     /* Path mapping */
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["games/medal-block-slot/src/*"]
+      "@/*": ["./games/medal-block-slot/src/*"]
     },
 
     /* Linting */
@@ -27,5 +26,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["games/medal-block-slot/src", "vite.config.ts"]
+  "include": ["./games/medal-block-slot/src", "./vite.config.ts"]
 }
